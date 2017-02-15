@@ -3,10 +3,11 @@ layout:     post
 title:      第一个博客
 subtitle:   这是我的第一个博客
 date:       2017年2月15日16:31:32
-author:     BY
+author:     BY wangkaijin
 header-img: img/post-bg-re-vs-ng2.jpg
 catalog: true
 tags:
     - Blog
 ---
-####第一个博客
+
+>这是我的第一篇博客。
