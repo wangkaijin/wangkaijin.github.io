@@ -1,0 +1,185 @@
+--- 
+layout:     post
+title:  静态代理&动态代理
+subtitle:   静态代理，JDK动态代理，CGLib动态代理
+date:       2017-07-27
+author:     BY wangkaijin
+header-img: img/post-bg-re-vs-ng2.jpg
+catalog: true
+tags:
+    - java
+---
+
+# JAVA三种代理的代码的实现
+**目标接口示例**
+
+```
+public interface Greeting {
+void sayHello(String name);
+}
+```
+
+**目标实现示例**
+
+```
+public class GreetingImpl implements Greeting {
+
+    @Override
+    public void sayHello(String name) {
+        System.out.println("Hello! "+name);
+    }
+}
+```
+## 静态代理
+
+```
+public class GreetingProxy implements Greeting {
+    private GreetingImpl greetingImpl;
+
+    public GreetingProxy(GreetingImpl greetingImpl) {
+        this.greetingImpl = greetingImpl;
+    }
+
+    @Override
+    public void sayHello(String name) {
+        before();
+        greetingImpl.sayHello(name);
+        after();
+    }
+
+    private void before() {
+        System.out.println("静态代理===》Before");
+    }
+
+    private void after() {
+        System.out.println("静态代理===》After");
+    }
+}
+```
+**客户端调用**
+
+```
+public class Client {
+    public static void main(String[] args) {
+        Greeting greetingProxy = new GreetingProxy(new GreetingImpl());
+        greetingProxy.sayHello("Kim");
+}
+```
+**输出**
+
+```
+静态代理===》Before
+Hello! Kim
+静态代理===》After
+```
+
+## JDK 动态代理
+
+```java
+public class JDKDynamicProxy implements InvocationHandler {
+
+    private Object target;
+
+    public JDKDynamicProxy(Object target) {
+        this.target = target;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getProxy() {
+        return (T) Proxy.newProxyInstance(
+                target.getClass().getClassLoader(),
+                target.getClass().getInterfaces(),
+                this);
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        before();
+        Object result = method.invoke(target, args);
+        after();
+        return result;
+    }
+
+    private void before() {
+        System.out.println("JDK动态代理===》Before");
+    }
+
+    private void after() {
+        System.out.println("JDK动态代理===》After");
+    }
+}
+```
+**客户端调用**
+
+```
+public class Client {
+    public static void main(String[] args) {
+       Greeting greeting = new JDKDynamicProxy(new GreetingImpl()).getProxy();
+        greeting.sayHello("Kim");
+}
+```
+**输出**
+
+```
+JDK动态代理===》Before
+Hello! Kim
+JDK动态代理===》After
+```
+## CGlib 动态代理
+
+```
+public class CGlibDynamicProxy implements MethodInterceptor {
+
+    //单例模式
+    private static CGlibDynamicProxy instance = new CGlibDynamicProxy();
+
+    public static CGlibDynamicProxy getInstance(){
+        return instance;
+    }
+
+    //限制外界去 new 本类
+    private CGlibDynamicProxy() {
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getProxy(Class<T> cls) {
+        return (T) Enhancer.create(cls, this);
+    }
+
+    @Override
+    public Object intercept(Object target, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+        before();
+        Object result = methodProxy.invokeSuper(target, args);
+        after();
+        return result;
+    }
+
+    private void before() {
+        System.out.println("CGlib动态代理===》Before");
+    }
+
+    private void after() {
+        System.out.println("CGlib动态代理===》After");
+    }
+}
+```
+**客户端调用**
+
+```
+public class Client {
+    public static void main(String[] args) {
+        Greeting greeting = CGlibDynamicProxy.getInstance().getProxy(GreetingImpl.class);
+        greeting.sayHello("Kim");
+}
+```
+**输出**
+
+```
+CGlib动态代理===》Before
+Hello! Kim
+CGlib动态代理===》After
+```
+# JDK动态代理与CGlib动态代理的区别
+1. JDK代理 实现的原理是java的反射机制；CGlib实现的原理是利用ASM（JAVA字节码处理框架）在内存中动态的生成被代理类的子类,因此不能对final修饰的类进行代理。
+2. JDK代理只能代理实现了接口的类，而CGlib则不用.
+3. CGLib 创建代理的速度比较慢，但创建代理后运行的速度却非常快，而JDK 动态代理正好相反。
